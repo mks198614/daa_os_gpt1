@@ -1,21 +1,25 @@
 import streamlit as st
 from transformers import pipeline
 
-# Load the model only once using session state
+# Load the model once using session state
 @st.cache_resource
 def load_model():
-    return pipeline("text-generation", model="EleutherAI/gpt-neo-1.3B")
+    return pipeline(
+        "text-generation",
+        model="EleutherAI/gpt-neo-1.3B",
+        device=-1,  # Set to 0 if you have a GPU locally
+    )
 
 model = load_model()
 
-# Title
+# Title and subtitle
 st.title("🤖 DAA & OS GPT - Free Tutor")
-st.subheader("Ask anything related to Design and Analysis of Algorithms or Operating Systems.")
+st.subheader("Ask anything about Design and Analysis of Algorithms or Operating Systems.")
 
 # Input box
-user_input = st.text_area("💬 Ask a question", height=100)
+user_input = st.text_area("💬 Ask a question:", height=100)
 
-# If input is given
+# Answer generation
 if st.button("Get Answer"):
     if user_input.strip() == "":
         st.warning("Please enter a question.")
@@ -25,7 +29,20 @@ if st.button("Get Answer"):
             f"Q: {user_input}\nA:"
         )
         with st.spinner("Thinking..."):
-            response = model(prompt, max_length=150, do_sample=True, temperature=0.7)[0]["generated_text"]
+            response = model(
+                prompt,
+                max_length=150,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.95,
+                top_k=50,
+                num_return_sequences=1
+            )[0]["generated_text"]
+            
             answer = response.split("A:")[-1].strip()
-            st.success("Answer:")
-            st.write(answer)
+
+            if not answer:
+                st.error("Hmm... couldn't generate a helpful response. Try rephrasing your question.")
+            else:
+                st.success("Answer:")
+                st.write(answer)
